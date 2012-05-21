@@ -2,7 +2,7 @@ package edu.umich.fuse.terms;
 
 public class DataTypes
 {
-	public class CorrectTranslation { }
+	public static class Translation { }
 	
-	public class IncorrectTranslation { }
+	public static class NotTranslation { }
 }

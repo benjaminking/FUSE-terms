@@ -27,5 +27,10 @@
     	<version>1.5.2-incubating</version>
     	<type>pom</type>
     </dependency>
+    <dependency>
+    	<groupId>tw.edu.ntu.csie</groupId>
+    	<artifactId>libsvm</artifactId>
+    	<version>3.1</version>
+    </dependency>
   </dependencies>
 </project>

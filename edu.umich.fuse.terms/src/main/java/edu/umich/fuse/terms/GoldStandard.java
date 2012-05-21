@@ -56,4 +56,12 @@ public class GoldStandard
 		}
 		return new ArrayList<String>();
 	}
+	
+	public boolean isTranslationOf(String term, String translation)
+	{
+		if(correctTranslations.containsKey(term.toLowerCase()))
+			if(correctTranslations.get(term.toLowerCase()).contains(translation.toLowerCase()))
+				return true;
+		return false;
+	}
 }

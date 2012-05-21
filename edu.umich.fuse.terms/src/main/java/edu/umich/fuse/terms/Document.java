@@ -32,7 +32,7 @@ public class Document
 		Matcher m = p.matcher(text);
 		while(m.find())
 		{
-			tokens.add(m.group(1));
+			tokens.add(m.group(1).toLowerCase());
 		}
 		text = m.replaceAll("");
 		return text;
@@ -42,7 +42,7 @@ public class Document
 	{
 		for(String token : text.split("\\W+"))
 		{
-			tokens.add(token);
+			tokens.add(token.toLowerCase());
 		}
 	}
 	

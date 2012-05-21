@@ -6,6 +6,20 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import weka.classifiers.functions.SMO;
+import weka.classifiers.meta.Bagging;
+import weka.classifiers.trees.J48;
+import weka.classifiers.trees.RandomForest;
+
+import net.sf.javaml.classification.evaluation.CrossValidation;
+import net.sf.javaml.classification.evaluation.PerformanceMeasure;
+import net.sf.javaml.core.Dataset;
+import net.sf.javaml.core.DefaultDataset;
+import net.sf.javaml.tools.weka.WekaClassifier;
+
+import libsvm.LibSVM;
 
 import edu.umich.fuse.Utility;
 
@@ -53,13 +67,13 @@ public class Driver
 		
 		for(int i=0; i<numMainLangResources; ++i)
 		{
-			File resourceFile = new File(args[4 + i]);
+			File resourceFile = new File(args[5 + i]);
 			mainLangResources.add(new InMemoryResource(resourceFile));
 		}
 		
 		for(int j=0; j<numSecondLangResources; ++j)
 		{
-			File resourceFile = new File(args[4 + numMainLangResources + j]);
+			File resourceFile = new File(args[5 + numMainLangResources + j]);
 			secondLangResources.add(new InMemoryResource(resourceFile));
 		}
 		
@@ -69,18 +83,54 @@ public class Driver
 		{
 			for(int j=0; j<numSecondLangResources; ++j)
 			{
-				resourcePairs.add(new AlignedResourcePair(mainLangResources.get(i), mainLangResources.get(j)));
+				AlignedResourcePair arp = new AlignedResourcePair(mainLangResources.get(i), secondLangResources.get(j));
+				arp.setScorer(new JaccardScorer());
+				resourcePairs.add(arp);
 			}
 		}
+		
+		TranslationCandidate.setNumScores(resourcePairs.size());
 		
 		List<String> terminologyList = Utility.readListFromFile(terminologyFile);
 		List<String> terminologyCandidateList = Utility.readListFromFile(terminologyCandidateFile);
 		
 		GoldStandard goldStandard = new GoldStandard(goldStandardFile);
+		
+		System.out.println("Compiling candidate translations");
+		
+		//Dataset allInstances = new DefaultDataset();
+		List<TermTranslationCandidates> termTranslationCandidates = new ArrayList<TermTranslationCandidates>();
+		for(String term : terminologyList)
+		{
+			TermTranslationCandidates currentTermCandidates = new TermTranslationCandidates(term);
+			for(AlignedResourcePair resourcePair : resourcePairs)
+			{
+				for(TranslationCandidate candidate : resourcePair.generateCandidateList(term, terminologyCandidateList))
+				{
+					if(goldStandard.isTranslationOf(term, candidate.getCandidate()))
+						candidate.markAsTranslation();
+					currentTermCandidates.addCandidate(candidate);				
+				}
+			}
+			termTranslationCandidates.add(currentTermCandidates);
+			//allInstances.addAll(currentTermCandidates.toDataset());
+		}
+		
+		System.out.println("Evaluating candidates");
+		
+		// J48 best so far F=0.576
+		//Bagging b = new Bagging();
+		//b.setClassifier(new RandomForest());
+		RandomForest rf = new RandomForest();
+		CustomCrossValidation crossValidation = new CustomCrossValidation(new WekaClassifier(rf));
+		Map<Object, PerformanceMeasure> results = crossValidation.crossValidation(termTranslationCandidates, 10);
+		
+		ResultPrinter printer = new ResultPrinter(results.get(1));
+		printer.printResults();
 	}
 	
 	public static void main(String[] args) throws IOException
 	{
-		singlePairDriver(args);
+		multiPairDriver(args);
 	}
 }
